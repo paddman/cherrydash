@@ -196,7 +196,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/readyz", get(readiness))
         .route("/api/v1/ingest/status", get(ingest_status))
         .route("/api/v1/events", post(ingest_event))
-        .with_state(state)
+        .with_state(state.clone())
         .layer(DefaultBodyLimit::max(settings.max_body_bytes))
         .layer(TraceLayer::new_for_http())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
