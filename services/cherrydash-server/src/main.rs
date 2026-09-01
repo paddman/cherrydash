@@ -8,7 +8,6 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
 use tower_http::{
-    cors::CorsLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     trace::TraceLayer,
 };
@@ -90,8 +89,7 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
-        .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
-        .layer(CorsLayer::permissive());
+        .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid));
 
     let listener = tokio::net::TcpListener::bind(settings.bind_addr)
         .await
@@ -134,7 +132,7 @@ async fn system_info(State(state): State<AppState>) -> Json<SystemInfoResponse> 
 
 async fn overview() -> Json<OverviewResponse> {
     Json(OverviewResponse {
-        health: "healthy",
+        health: "foundation",
         hosts_total: 0,
         hosts_problem: 0,
         active_alerts: 0,
@@ -144,10 +142,10 @@ async fn overview() -> Json<OverviewResponse> {
         capabilities: vec![
             "distributed-monitoring",
             "unified-dashboards",
-            "multi-tenant",
-            "open-telemetry",
-            "prometheus-compatible",
-            "automation-with-approval",
+            "multi-tenant-schema",
+            "open-telemetry-contract",
+            "prometheus-compatibility-planned",
+            "automation-with-approval-planned",
         ],
     })
 }

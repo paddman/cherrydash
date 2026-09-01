@@ -9,31 +9,30 @@ use std::{
     },
 };
 
-use anyhow::Context;
+use anyhow::{Context, bail};
 use axum::{
     Json, Router,
     extract::{DefaultBodyLimit, State},
-    http::{HeaderMap, HeaderName, StatusCode},
+    http::{HeaderMap, HeaderName, StatusCode, header::AUTHORIZATION},
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use cherrydash_core::{TelemetryEnvelope, TelemetryInput};
+use cherrydash_core::{TelemetryEnvelope, TelemetryInput, validate_tenant_id};
 use chrono::Utc;
 use clap::Parser;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::{
     fs::{File, OpenOptions},
     io::AsyncWriteExt,
     sync::Mutex,
 };
 use tower_http::{
-    cors::CorsLayer,
     request_id::{MakeRequestUuid, PropagateRequestIdLayer, SetRequestIdLayer},
     trace::TraceLayer,
 };
 use tracing_subscriber::EnvFilter;
 
-const TENANT_HEADER: &str = "x-cherrydash-tenant-id";
+const DEVELOPMENT_TOKEN: &str = "development-only-change-me";
 
 #[derive(Debug, Clone, Parser)]
 #[command(
@@ -66,16 +65,32 @@ struct Settings {
     #[arg(long, env = "CHERRYDASH_INGEST_SYNC_WRITES", default_value_t = false)]
     sync_writes: bool,
 
+    #[arg(long, env = "CHERRYDASH_ENVIRONMENT", default_value = "development")]
+    environment: String,
+
+    #[arg(
+        long,
+        env = "CHERRYDASH_INGEST_KEYS_JSON",
+        default_value = r#"[{"tenant_id":"default","token":"development-only-change-me"}]"#
+    )]
+    credentials_json: String,
+
     #[arg(long, env = "CHERRYDASH_LOG_JSON", default_value_t = false)]
     log_json: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct IngestCredential {
+    tenant_id: String,
+    token: String,
 }
 
 #[derive(Clone)]
 struct AppState {
     writer: Arc<Mutex<File>>,
-    wal_path: Arc<PathBuf>,
     sync_writes: bool,
     accepted_total: Arc<AtomicU64>,
+    credentials: Arc<Vec<IngestCredential>>,
 }
 
 #[derive(Serialize)]
@@ -92,8 +107,8 @@ struct IngestStatusResponse {
     status: &'static str,
     accepted_total: u64,
     transport: &'static str,
+    acknowledgement_mode: &'static str,
     durable_wal: bool,
-    wal_path: String,
 }
 
 #[derive(Serialize)]
@@ -114,6 +129,7 @@ struct ErrorResponse {
 #[derive(Debug)]
 enum ApiError {
     BadRequest(String),
+    Unauthorized,
     Internal,
 }
 
@@ -121,6 +137,11 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error, message) = match self {
             Self::BadRequest(message) => (StatusCode::BAD_REQUEST, "bad_request", message),
+            Self::Unauthorized => (
+                StatusCode::UNAUTHORIZED,
+                "unauthorized",
+                "a valid bearer token is required".to_owned(),
+            ),
             Self::Internal => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "internal_error",
@@ -136,6 +157,8 @@ impl IntoResponse for ApiError {
 async fn main() -> anyhow::Result<()> {
     let settings = Settings::parse();
     init_tracing(settings.log_json);
+
+    let credentials = parse_credentials(&settings)?;
 
     if let Some(parent) = settings
         .wal_path
@@ -156,23 +179,28 @@ async fn main() -> anyhow::Result<()> {
 
     let state = AppState {
         writer: Arc::new(Mutex::new(writer)),
-        wal_path: Arc::new(settings.wal_path.clone()),
         sync_writes: settings.sync_writes,
         accepted_total: Arc::new(AtomicU64::new(0)),
+        credentials: Arc::new(credentials),
     };
+
+    if !settings.sync_writes {
+        tracing::warn!(
+            "ingest acknowledgements use flush mode and are not crash-durable; enable CHERRYDASH_INGEST_SYNC_WRITES for durable acknowledgement"
+        );
+    }
 
     let request_id_header = HeaderName::from_static("x-request-id");
     let app = Router::new()
         .route("/healthz", get(health))
-        .route("/readyz", get(health))
+        .route("/readyz", get(readiness))
         .route("/api/v1/ingest/status", get(ingest_status))
         .route("/api/v1/events", post(ingest_event))
         .with_state(state)
         .layer(DefaultBodyLimit::max(settings.max_body_bytes))
         .layer(TraceLayer::new_for_http())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
-        .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
-        .layer(CorsLayer::permissive());
+        .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid));
 
     let listener = tokio::net::TcpListener::bind(settings.bind_addr)
         .await
@@ -182,6 +210,7 @@ async fn main() -> anyhow::Result<()> {
         address = %settings.bind_addr,
         wal = %settings.wal_path.display(),
         sync_writes = settings.sync_writes,
+        credential_count = state.credentials.len(),
         "CherryDash ingestion gateway listening"
     );
 
@@ -193,6 +222,34 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn parse_credentials(settings: &Settings) -> anyhow::Result<Vec<IngestCredential>> {
+    let credentials: Vec<IngestCredential> = serde_json::from_str(&settings.credentials_json)
+        .context("CHERRYDASH_INGEST_KEYS_JSON must be a JSON array of tenant_id/token objects")?;
+
+    if credentials.is_empty() {
+        bail!("at least one ingest credential is required");
+    }
+
+    for credential in &credentials {
+        validate_tenant_id(&credential.tenant_id)
+            .with_context(|| format!("invalid tenant id in ingest credential: {}", credential.tenant_id))?;
+
+        if credential.token.len() < 24 {
+            bail!("ingest tokens must contain at least 24 bytes");
+        }
+    }
+
+    if !settings.environment.eq_ignore_ascii_case("development")
+        && credentials
+            .iter()
+            .any(|credential| credential.token == DEVELOPMENT_TOKEN)
+    {
+        bail!("the development ingest token is forbidden outside the development environment");
+    }
+
+    Ok(credentials)
+}
+
 async fn health() -> Json<HealthResponse> {
     Json(HealthResponse {
         status: "ok",
@@ -201,13 +258,36 @@ async fn health() -> Json<HealthResponse> {
     })
 }
 
+async fn readiness(State(state): State<AppState>) -> Response {
+    let writer = state.writer.lock().await;
+    match writer.metadata().await {
+        Ok(_) => Json(HealthResponse {
+            status: "ready",
+            service: "cherrydash-ingest",
+            version: env!("CARGO_PKG_VERSION"),
+        })
+        .into_response(),
+        Err(error) => {
+            tracing::error!(%error, "WAL is not writable/readable for readiness check");
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(ErrorResponse {
+                    error: "not_ready",
+                    message: "the ingestion WAL is unavailable".to_owned(),
+                }),
+            )
+                .into_response()
+        }
+    }
+}
+
 async fn ingest_status(State(state): State<AppState>) -> Json<IngestStatusResponse> {
     Json(IngestStatusResponse {
         status: "ready",
         accepted_total: state.accepted_total.load(Ordering::Relaxed),
         transport: "append-only-local-wal",
-        durable_wal: true,
-        wal_path: state.wal_path.display().to_string(),
+        acknowledgement_mode: if state.sync_writes { "fsync" } else { "flush" },
+        durable_wal: state.sync_writes,
     })
 }
 
@@ -216,11 +296,7 @@ async fn ingest_event(
     headers: HeaderMap,
     Json(input): Json<TelemetryInput>,
 ) -> Result<impl IntoResponse, ApiError> {
-    let tenant_id = headers
-        .get(TENANT_HEADER)
-        .and_then(|value| value.to_str().ok())
-        .ok_or_else(|| ApiError::BadRequest(format!("missing {TENANT_HEADER} header")))?;
-
+    let tenant_id = authenticate_tenant(&headers, &state.credentials)?;
     let received_at = Utc::now();
     let envelope = TelemetryEnvelope::from_input(tenant_id, input, received_at)
         .map_err(|error| ApiError::BadRequest(error.to_string()))?;
@@ -254,12 +330,48 @@ async fn ingest_event(
     Ok((
         StatusCode::ACCEPTED,
         Json(AcceptedResponse {
-            status: "accepted",
+            status: if state.sync_writes {
+                "accepted_durable"
+            } else {
+                "accepted_buffered"
+            },
             event_id: envelope.event_id.to_string(),
             signal: envelope.signal.to_string(),
             received_at,
         }),
     ))
+}
+
+fn authenticate_tenant<'a>(
+    headers: &HeaderMap,
+    credentials: &'a [IngestCredential],
+) -> Result<&'a str, ApiError> {
+    let value = headers
+        .get(AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .ok_or(ApiError::Unauthorized)?;
+    let (scheme, token) = value.split_once(' ').ok_or(ApiError::Unauthorized)?;
+
+    if !scheme.eq_ignore_ascii_case("bearer") || token.is_empty() {
+        return Err(ApiError::Unauthorized);
+    }
+
+    credentials
+        .iter()
+        .find(|credential| constant_time_eq(token.as_bytes(), credential.token.as_bytes()))
+        .map(|credential| credential.tenant_id.as_str())
+        .ok_or(ApiError::Unauthorized)
+}
+
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+
+    left.iter()
+        .zip(right)
+        .fold(0_u8, |difference, (left, right)| difference | (left ^ right))
+        == 0
 }
 
 fn init_tracing(json: bool) {

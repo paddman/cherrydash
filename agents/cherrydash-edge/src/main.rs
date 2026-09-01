@@ -3,7 +3,7 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use anyhow::{Context, bail};
-use cherrydash_core::{TelemetryInput, TelemetrySignal, validate_tenant_id};
+use cherrydash_core::{TelemetryInput, TelemetrySignal};
 use chrono::Utc;
 use clap::Parser;
 use reqwest::Client;
@@ -25,8 +25,12 @@ struct Settings {
     )]
     ingest_url: String,
 
-    #[arg(long, env = "CHERRYDASH_TENANT_ID", default_value = "default")]
-    tenant_id: String,
+    #[arg(
+        long,
+        env = "CHERRYDASH_INGEST_TOKEN",
+        default_value = "development-only-change-me"
+    )]
+    ingest_token: String,
 
     #[arg(long, env = "CHERRYDASH_EDGE_ID", default_value = "auto")]
     edge_id: String,
@@ -45,7 +49,10 @@ struct Settings {
 async fn main() -> anyhow::Result<()> {
     let mut settings = Settings::parse();
     init_tracing(settings.log_json);
-    validate_tenant_id(&settings.tenant_id).context("invalid tenant id")?;
+
+    if settings.ingest_token.len() < 24 {
+        bail!("CHERRYDASH_INGEST_TOKEN must contain at least 24 bytes");
+    }
 
     let hostname = hostname();
     if settings.edge_id == "auto" {
@@ -69,7 +76,6 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!(
         edge_id = %settings.edge_id,
-        tenant_id = %settings.tenant_id,
         endpoint = %endpoint,
         "CherryDash edge collector started"
     );
@@ -78,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
         tokio::select! {
             _ = ticker.tick() => {
                 if let Err(error) = send_heartbeat(&client, &endpoint, &settings, &hostname).await {
-                    tracing::warn!(%error, "edge heartbeat delivery failed");
+                    tracing::warn!(%error, "edge heartbeat delivery failed; durable local queue is not implemented yet");
                 }
             }
             _ = &mut shutdown => {
@@ -113,7 +119,7 @@ async fn send_heartbeat(
 
     let response = client
         .post(endpoint)
-        .header("x-cherrydash-tenant-id", &settings.tenant_id)
+        .bearer_auth(&settings.ingest_token)
         .json(&input)
         .send()
         .await
