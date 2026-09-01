@@ -1,0 +1,21 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Node
+node_modules/
+web/dist/
+
+# Environment and local state
+.env
+.env.*
+!.env.example
+.data/
+*.log
+*.ndjson
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
