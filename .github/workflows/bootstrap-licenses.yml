@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+name: Bootstrap license files and SPDX headers
+
+on:
+  push:
+    branches:
+      - chore/licensing-cla
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bootstrap-licenses-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out licensing branch
+        uses: actions/checkout@v6
+        with:
+          ref: chore/licensing-cla
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+
+      - name: Install canonical license texts
+        shell: bash
+        run: |
+          set -euo pipefail
+          SPDX_COMMIT='a3cbf2e897d54bccec0c35469c691521d089ef53'
+          SPDX_BASE="https://raw.githubusercontent.com/spdx/license-list-data/${SPDX_COMMIT}/text"
+
+          curl --fail --silent --show-error --location \
+            "${SPDX_BASE}/AGPL-3.0-only.txt" \
+            --output LICENSE
+          curl --fail --silent --show-error --location \
+            "${SPDX_BASE}/Apache-2.0.txt" \
+            --output /tmp/Apache-2.0.txt
+
+          for directory in agents crates proto schemas; do
+            install -m 0644 /tmp/Apache-2.0.txt "${directory}/LICENSE"
+          done
+
+      - name: Apply path licenses and SPDX metadata
+        run: python3 scripts/license_policy.py --write
+
+      - name: Commit generated licensing changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet && test -z "$(git status --porcelain)"; then
+            echo 'No licensing changes were required.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add --all
+          git commit -m 'chore: apply license files and SPDX headers'
+          git push origin HEAD:chore/licensing-cla
