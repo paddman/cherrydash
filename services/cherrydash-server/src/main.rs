@@ -3,12 +3,7 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use anyhow::Context;
-use axum::{
-    Json, Router,
-    extract::State,
-    http::HeaderName,
-    routing::get,
-};
+use axum::{Json, Router, extract::State, http::HeaderName, routing::get};
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use serde::Serialize;
@@ -20,7 +15,11 @@ use tower_http::{
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "cherrydash-server", version, about = "CherryDash control plane API")]
+#[command(
+    name = "cherrydash-server",
+    version,
+    about = "CherryDash control plane API"
+)]
 struct Settings {
     #[arg(long, env = "CHERRYDASH_BIND_ADDR", default_value = "0.0.0.0:8080")]
     bind_addr: SocketAddr,
@@ -91,10 +90,7 @@ async fn main() -> anyhow::Result<()> {
         .with_state(state)
         .layer(TraceLayer::new_for_http())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
-        .layer(SetRequestIdLayer::new(
-            request_id_header,
-            MakeRequestUuid,
-        ))
+        .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
         .layer(CorsLayer::permissive());
 
     let listener = tokio::net::TcpListener::bind(settings.bind_addr)
@@ -178,8 +174,8 @@ async fn shutdown_signal() {
     {
         use tokio::signal::unix::{SignalKind, signal};
 
-        let mut terminate = signal(SignalKind::terminate())
-            .expect("failed to register SIGTERM handler");
+        let mut terminate =
+            signal(SignalKind::terminate()).expect("failed to register SIGTERM handler");
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {},
             _ = terminate.recv() => {},

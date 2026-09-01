@@ -17,8 +17,8 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use chrono::Utc;
 use cherrydash_core::{TelemetryEnvelope, TelemetryInput};
+use chrono::Utc;
 use clap::Parser;
 use serde::Serialize;
 use tokio::{
@@ -36,9 +36,17 @@ use tracing_subscriber::EnvFilter;
 const TENANT_HEADER: &str = "x-cherrydash-tenant-id";
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "cherrydash-ingest", version, about = "CherryDash telemetry ingestion gateway")]
+#[command(
+    name = "cherrydash-ingest",
+    version,
+    about = "CherryDash telemetry ingestion gateway"
+)]
 struct Settings {
-    #[arg(long, env = "CHERRYDASH_INGEST_BIND_ADDR", default_value = "0.0.0.0:8081")]
+    #[arg(
+        long,
+        env = "CHERRYDASH_INGEST_BIND_ADDR",
+        default_value = "0.0.0.0:8081"
+    )]
     bind_addr: SocketAddr,
 
     #[arg(
@@ -48,7 +56,11 @@ struct Settings {
     )]
     wal_path: PathBuf,
 
-    #[arg(long, env = "CHERRYDASH_INGEST_MAX_BODY_BYTES", default_value_t = 1_048_576)]
+    #[arg(
+        long,
+        env = "CHERRYDASH_INGEST_MAX_BODY_BYTES",
+        default_value_t = 1_048_576
+    )]
     max_body_bytes: usize,
 
     #[arg(long, env = "CHERRYDASH_INGEST_SYNC_WRITES", default_value_t = false)]
@@ -159,10 +171,7 @@ async fn main() -> anyhow::Result<()> {
         .layer(DefaultBodyLimit::max(settings.max_body_bytes))
         .layer(TraceLayer::new_for_http())
         .layer(PropagateRequestIdLayer::new(request_id_header.clone()))
-        .layer(SetRequestIdLayer::new(
-            request_id_header,
-            MakeRequestUuid,
-        ))
+        .layer(SetRequestIdLayer::new(request_id_header, MakeRequestUuid))
         .layer(CorsLayer::permissive());
 
     let listener = tokio::net::TcpListener::bind(settings.bind_addr)
@@ -275,8 +284,8 @@ async fn shutdown_signal() {
     {
         use tokio::signal::unix::{SignalKind, signal};
 
-        let mut terminate = signal(SignalKind::terminate())
-            .expect("failed to register SIGTERM handler");
+        let mut terminate =
+            signal(SignalKind::terminate()).expect("failed to register SIGTERM handler");
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {},
             _ = terminate.recv() => {},

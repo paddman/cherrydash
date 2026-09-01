@@ -3,8 +3,8 @@
 use std::{collections::BTreeMap, time::Duration};
 
 use anyhow::{Context, bail};
-use chrono::Utc;
 use cherrydash_core::{TelemetryInput, TelemetrySignal, validate_tenant_id};
+use chrono::Utc;
 use clap::Parser;
 use reqwest::Client;
 use serde_json::{Value, json};
@@ -12,7 +12,11 @@ use tokio::time::{MissedTickBehavior, interval};
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug, Clone, Parser)]
-#[command(name = "cherrydash-edge", version, about = "CherryDash distributed edge collector")]
+#[command(
+    name = "cherrydash-edge",
+    version,
+    about = "CherryDash distributed edge collector"
+)]
 struct Settings {
     #[arg(
         long,
@@ -193,8 +197,8 @@ fn hostname() -> String {
 }
 
 fn init_tracing(json: bool) {
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("cherrydash=info"));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("cherrydash=info"));
 
     if json {
         tracing_subscriber::fmt()
@@ -214,8 +218,8 @@ async fn shutdown_signal() {
     {
         use tokio::signal::unix::{SignalKind, signal};
 
-        let mut terminate = signal(SignalKind::terminate())
-            .expect("failed to register SIGTERM handler");
+        let mut terminate =
+            signal(SignalKind::terminate()).expect("failed to register SIGTERM handler");
         tokio::select! {
             _ = tokio::signal::ctrl_c() => {},
             _ = terminate.recv() => {},
