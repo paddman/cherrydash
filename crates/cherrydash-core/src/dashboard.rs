@@ -232,7 +232,10 @@ impl DashboardDefinition {
         let mut layouts = BTreeMap::new();
         for layout in &self.layouts {
             validate_identifier("layout key", &layout.key)?;
-            if layouts.insert(layout.key.as_str(), layout.columns).is_some() {
+            if layouts
+                .insert(layout.key.as_str(), layout.columns)
+                .is_some()
+            {
                 return Err(DashboardValidationError::Duplicate {
                     kind: "layout key",
                     value: layout.key.clone(),
@@ -241,17 +244,13 @@ impl DashboardDefinition {
             if layout.columns == 0 || layout.columns > MAX_LAYOUT_COLUMNS {
                 return Err(DashboardValidationError::InvalidLayout {
                     layout: layout.key.clone(),
-                    message: format!(
-                        "columns must be between 1 and {MAX_LAYOUT_COLUMNS}"
-                    ),
+                    message: format!("columns must be between 1 and {MAX_LAYOUT_COLUMNS}"),
                 });
             }
             if layout.row_height_px == 0 || layout.row_height_px > MAX_ROW_HEIGHT_PX {
                 return Err(DashboardValidationError::InvalidLayout {
                     layout: layout.key.clone(),
-                    message: format!(
-                        "rowHeightPx must be between 1 and {MAX_ROW_HEIGHT_PX}"
-                    ),
+                    message: format!("rowHeightPx must be between 1 and {MAX_ROW_HEIGHT_PX}"),
                 });
             }
         }
@@ -262,11 +261,7 @@ impl DashboardDefinition {
             validate_identifier("variable kind", &variable.kind)?;
             insert_unique(&mut variables, "variable name", &variable.name)?;
             if let Some(query) = &variable.query {
-                validate_query(
-                    query,
-                    &data_sources,
-                    &format!("variable {}", variable.name),
-                )?;
+                validate_query(query, &data_sources, &format!("variable {}", variable.name))?;
             }
         }
 
@@ -379,10 +374,7 @@ pub enum DashboardValidationError {
     #[error("{owner} references unknown data source {data_source}")]
     UnknownDataSource { owner: String, data_source: String },
     #[error("{field} for {owner} must be a JSON object or null")]
-    ExpectedObject {
-        field: &'static str,
-        owner: String,
-    },
+    ExpectedObject { field: &'static str, owner: String },
     #[error("{owner} contains inline secret-like field {key}; use secretRefs")]
     InlineSecret { owner: String, key: String },
     #[error("invalid setting {setting}: {message}")]
@@ -425,14 +417,10 @@ fn insert_unique<'a>(
     Ok(())
 }
 
-fn validate_identifier(
-    field: &'static str,
-    value: &str,
-) -> Result<(), DashboardValidationError> {
+fn validate_identifier(field: &'static str, value: &str) -> Result<(), DashboardValidationError> {
     let valid_length = (1..=128).contains(&value.len());
     let valid_characters = value.bytes().all(|byte| {
-        byte.is_ascii_alphanumeric()
-            || matches!(byte, b'.' | b'-' | b'_' | b'/' | b':' | b'@')
+        byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'-' | b'_' | b'/' | b':' | b'@')
     });
 
     if !valid_length || !valid_characters || value.contains("..") {
@@ -450,9 +438,7 @@ fn validate_text(
     max: usize,
 ) -> Result<(), DashboardValidationError> {
     let trimmed = value.trim();
-    if trimmed.is_empty()
-        || trimmed.chars().count() > max
-        || trimmed.chars().any(char::is_control)
+    if trimmed.is_empty() || trimmed.chars().count() > max || trimmed.chars().any(char::is_control)
     {
         return Err(DashboardValidationError::InvalidText { field, max });
     }
@@ -465,14 +451,11 @@ fn validate_timezone(value: &str) -> Result<(), DashboardValidationError> {
         || (value.contains('/')
             && value.len() <= 128
             && value.bytes().all(|byte| {
-                byte.is_ascii_alphanumeric()
-                    || matches!(byte, b'/' | b'_' | b'-' | b'+')
+                byte.is_ascii_alphanumeric() || matches!(byte, b'/' | b'_' | b'-' | b'+')
             }));
 
     if !valid {
-        return Err(DashboardValidationError::InvalidTimezone(
-            value.to_owned(),
-        ));
+        return Err(DashboardValidationError::InvalidTimezone(value.to_owned()));
     }
     Ok(())
 }
@@ -506,11 +489,12 @@ fn validate_query(
     if let Some(shape) = &query.expected_shape {
         validate_identifier("expected data shape", shape)?;
     }
-    validate_object("options", &format!("query {} in {owner}", query.id), &query.options)?;
-    reject_inline_secrets(
+    validate_object(
+        "options",
         &format!("query {} in {owner}", query.id),
-        &query.expression,
+        &query.options,
     )?;
+    reject_inline_secrets(&format!("query {} in {owner}", query.id), &query.expression)?;
     reject_inline_secrets(&format!("query {} in {owner}", query.id), &query.options)?;
     Ok(())
 }
