@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 .PHONY: check fmt test web-build compose-config compose-up compose-down
 
 check:

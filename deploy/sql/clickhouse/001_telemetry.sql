@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: AGPL-3.0-only
 CREATE DATABASE IF NOT EXISTS cherrydash;
 
 CREATE TABLE IF NOT EXISTS cherrydash.telemetry_events

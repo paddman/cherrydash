@@ -44,3 +44,14 @@ The pull request must state:
 - tests performed
 - rollback path
 - provenance of any dependency, protocol definition, fixture or asset
+
+## Contributor License Agreement
+
+ทุก Contribution ที่มีสาระสำคัญต้องลงนาม [`CLA.md`](CLA.md) ผ่าน CLA Assistant ก่อน merge ผู้ลงนามรับรองสิทธิ์ในผลงาน แหล่งที่มาของ third-party material และความถูกต้องของข้อมูลเกี่ยวกับ AI-assisted contribution
+
+License ของ Contribution พิจารณาจาก path ปลายทาง:
+
+- `agents/`, `crates/`, `proto/`, `schemas/`: `Apache-2.0`
+- path อื่นทั้งหมดที่ไม่มี `LICENSE` ใกล้กว่า: `AGPL-3.0-only`
+
+ห้ามลบหรือเปลี่ยน SPDX identifier โดยไม่มีการอนุมัติจากผู้ดูแล และห้ามย้ายไฟล์ข้าม license boundary โดยไม่ตรวจ license compatibility

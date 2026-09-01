@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: AGPL-3.0-only
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 CREATE TABLE IF NOT EXISTS tenants (
