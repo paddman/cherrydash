@@ -231,8 +231,12 @@ fn parse_credentials(settings: &Settings) -> anyhow::Result<Vec<IngestCredential
     }
 
     for credential in &credentials {
-        validate_tenant_id(&credential.tenant_id)
-            .with_context(|| format!("invalid tenant id in ingest credential: {}", credential.tenant_id))?;
+        validate_tenant_id(&credential.tenant_id).with_context(|| {
+            format!(
+                "invalid tenant id in ingest credential: {}",
+                credential.tenant_id
+            )
+        })?;
 
         if credential.token.len() < 24 {
             bail!("ingest tokens must contain at least 24 bytes");
@@ -370,7 +374,9 @@ fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
 
     left.iter()
         .zip(right)
-        .fold(0_u8, |difference, (left, right)| difference | (left ^ right))
+        .fold(0_u8, |difference, (left, right)| {
+            difference | (left ^ right)
+        })
         == 0
 }
 
