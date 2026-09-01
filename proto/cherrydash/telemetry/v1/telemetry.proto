@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package cherrydash.telemetry.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_multiple_files = true;
+option java_package = "com.cherrydash.telemetry.v1";
+
+service TelemetryIngestService {
+  rpc Export(ExportRequest) returns (ExportResponse);
+  rpc ExportStream(stream ExportRequest) returns (ExportResponse);
+}
+
+enum Signal {
+  SIGNAL_UNSPECIFIED = 0;
+  SIGNAL_METRIC = 1;
+  SIGNAL_LOG = 2;
+  SIGNAL_TRACE = 3;
+  SIGNAL_EVENT = 4;
+  SIGNAL_INVENTORY = 5;
+  SIGNAL_HEARTBEAT = 6;
+}
+
+message TelemetryEnvelope {
+  uint32 schema_version = 1;
+  string event_id = 2;
+  string tenant_id = 3;
+  Signal signal = 4;
+  string source = 5;
+  google.protobuf.Timestamp observed_at = 6;
+  google.protobuf.Timestamp received_at = 7;
+  map<string, string> attributes = 8;
+  google.protobuf.Struct body = 9;
+}
+
+message ExportRequest {
+  repeated TelemetryEnvelope events = 1;
+  string edge_id = 2;
+  string batch_id = 3;
+}
+
+message ExportResponse {
+  uint64 accepted = 1;
+  uint64 rejected = 2;
+  string checkpoint = 3;
+  repeated Rejection rejections = 4;
+}
+
+message Rejection {
+  string event_id = 1;
+  string code = 2;
+  string message = 3;
+  bool retryable = 4;
+}

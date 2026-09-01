@@ -1,4 +1,4 @@
-.PHONY: check fmt test web-build compose-up compose-down
+.PHONY: check fmt test web-build compose-config compose-up compose-down
 
 check:
 	cargo fmt --all -- --check
@@ -8,11 +8,14 @@ check:
 fmt:
 	cargo fmt --all
 
- test:
+test:
 	cargo test --workspace
 
 web-build:
 	cd web && npm install --no-audit --no-fund && npm run build
+
+compose-config:
+	docker compose -f deploy/compose/docker-compose.yml config --quiet
 
 compose-up:
 	docker compose -f deploy/compose/docker-compose.yml up --build
