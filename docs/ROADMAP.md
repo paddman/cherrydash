@@ -11,11 +11,13 @@ Roadmap เรียงตาม dependency และความเสี่ย
 - [x] Append-only development ingestion file
 - [x] Authenticated development edge heartbeat
 - [x] Enterprise dashboard shell
+- [x] Industry-neutral dashboard definition v1, Rust validation and JSON Schema
+- [x] Renderer and declarative Domain Pack manifest schemas
 - [x] Docker Compose development topology
 - [x] PostgreSQL and ClickHouse initial schemas
 - [x] CI foundation
 - [x] No-fork/clean-room policy
-- [x] Initial security, identity, WAL and readiness specifications
+- [x] Initial security, identity, WAL, dashboard and readiness specifications
 - [ ] Cargo/npm lockfiles and deterministic CI install
 - [ ] End-to-end integration test
 
@@ -26,7 +28,7 @@ Roadmap เรียงตาม dependency และความเสี่ย
 ### Identity and security
 
 - Edge enrollment, unique certificate identity, mTLS, rotation and revocation
-- Credential-derived tenant context across HTTP, gRPC, NATS, storage and cache
+- Credential-derived tenant context across HTTP, gRPC, event fabric, storage and cache
 - OIDC/service accounts, RBAC/ABAC and PostgreSQL RLS
 - Secret-reference/vault interface
 - Ingest, query, cardinality and storage quotas
@@ -70,6 +72,7 @@ Roadmap เรียงตาม dependency และความเสี่ย
 - Typed ClickHouse tables, materialized rollups, TTL and cold-tier export
 - Ingestion health, queue age, lag, retry, duplicate and storage-latency dashboards
 - Query gateway with cancellation and tenant resource governance
+- Universal frame transport with semantic metadata and version negotiation
 
 **Definition of done:** telemetry survives component outage without silent loss and every stored signal is queryable through a tenant-safe typed contract.
 
@@ -85,17 +88,46 @@ Roadmap เรียงตาม dependency และความเสี่ย
 
 **Definition of done:** a remote site monitors servers/network devices during central outage and reconciles safely after reconnect.
 
-## Phase 3 — Query and dashboard engine
+## Phase 3 — Universal query and dashboard runtime
+
+### Query and semantic layer
 
 - Metrics query API with PromQL-compatible public surface
-- Log/event query language and trace waterfall
-- Resource graph and service topology
-- Dashboard persistence, folders, variables, transformations and annotations
-- Library panels and reusable queries
-- Dashboard/template GitOps API
+- Log/event query language and trace waterfall contract
+- Universal Data Frame API with scalar, table, time-series, event, topology, geospatial, media, document and custom shapes
+- Field semantic metadata for unit, currency, timezone, resource, quality, sensitivity and state
+- Shared versioned transformation pipeline for dashboard, alert and report
+- Resource graph and service topology enrichment
+
+### Native dashboard runtime
+
+- Dashboard persistence, revision history, folders and promotion workflow
+- Renderer registry and capability negotiation
+- Built-in stat, time-series, table, status-grid, text and event renderers
+- Variables, transformations, annotations, drilldown, cross-filter and linked time range
+- Desktop, tablet, mobile, wallboard, kiosk, embed, print/PDF and accessibility layouts
+- Server-side deterministic report/snapshot rendering
+- Library panels, reusable queries and dashboard-as-code/GitOps API
+
+### Extensibility and global coverage
+
+- Renderer SDK with built-in, Web Worker, WASM and sandboxed-iframe execution modes
+- Signed renderer manifest, permission policy, quotas and rollback
+- Declarative Domain Pack registry, semantic dictionaries and conformance tests
+- Adapter SDK and schema discovery
+- Locale, timezone, currency, SI/IEC/imperial units, RTL and translation bundles
+- Keyboard, screen-reader, table fallback, high-contrast and color-independent behavior
+- Geospatial, topology, process-mimic, scientific, media and guarded workflow renderer families
 - Isolated optional document importers with explicit conversion reports
 
-**Definition of done:** dashboards are tenant-safe, query-limited, shareable as code and use the same query semantics as alert evaluation.
+**Definition of done:**
+
+- Dashboards are tenant-safe, query-limited and shareable as code
+- Dashboard, alert and report use the same query/transform semantics
+- A new industry is delivered as a Domain Pack without modifying Core services or primary database schema
+- A new renderer installs through a versioned sandboxed contract and cannot bypass authorization
+- One dashboard definition renders correctly in desktop, mobile, wallboard and print modes
+- Accessibility, locale, timezone, unit, masking and export-policy tests pass
 
 ## Phase 4 — Alert, incident and SLO
 
@@ -104,7 +136,7 @@ Roadmap เรียงตาม dependency และความเสี่ย
 - Notification routing, escalation, on-call and silence
 - Incident evidence graph, ownership and correlated timeline
 - SLI/SLO, error budget and multi-window burn-rate alerts
-- Scheduled executive and technical reports
+- Scheduled executive, technical and domain reports
 
 **Definition of done:** every alert decision can be replayed from rule version, input window, query and evaluation timestamp.
 
@@ -128,6 +160,8 @@ Roadmap เรียงตาม dependency และความเสี่ย
 - OIDC, SAML, LDAP, SCIM and fine-grained MSP hierarchy
 - Tenant quotas, retention tiers and chargeback
 - Air-gapped update bundles, SBOM, signing and upgrade orchestration
-- Repeatable benchmark suite and published capacity model
+- Signed Domain Pack/renderer distribution and revocation
+- Industry conformance suites with explicit supported-version matrix
+- Repeatable backend, query, renderer and browser-memory benchmark suite
 
-**Definition of done:** enterprise and scale claims are backed by release evidence, production-like datasets and tested recovery procedures.
+**Definition of done:** enterprise, industry and scale claims are backed by release evidence, production-like datasets and tested recovery procedures.

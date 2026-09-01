@@ -1,8 +1,8 @@
 # CherryDash
 
-**Unified Infrastructure Monitoring & Observability Platform**
+**Universal Monitoring, Observability & Dashboard Platform**
 
-CherryDash คือแพลตฟอร์ม monitoring รุ่นใหม่ที่รวมความลึกด้าน infrastructure monitoring เข้ากับ dashboard, Explore และ multi-signal observability โดยสร้างเป็นผลิตภัณฑ์ใหม่บน object model, tenant, RBAC, alert และ incident lifecycle ชุดเดียว
+CherryDash คือแพลตฟอร์ม monitoring และ observability ที่พัฒนาขึ้นใหม่ทั้งหมด พร้อม dashboard engine แบบ industry-neutral ซึ่งใช้ object model, tenant, RBAC, query, alert, incident และ lifecycle ชุดเดียว วงการใหม่เพิ่มผ่าน semantic contract, renderer และ Domain Pack โดยไม่แก้หรือ fork แกนระบบ
 
 > Status: foundation / pre-alpha. ยังไม่พร้อมใช้ production และยังไม่มีผล benchmark ที่รับรอง scale claim
 
@@ -12,11 +12,14 @@ CherryDash เป็น clean-room implementation: ไม่ fork, copy, embed, 
 
 ## เป้าหมายผลิตภัณฑ์
 
-- Monitor server, VM, network, storage, cloud, Kubernetes, database, application และ API
-- Agent + agentless collection ผ่าน OTLP, Prometheus, SNMP, syslog, HTTP, ICMP, SSH, WMI, IPMI/Redfish
+- Monitor server, VM, network, storage, cloud, Kubernetes, database, application, facility, device และ API
+- Agent + agentless collection ผ่าน public/open protocols และ versioned adapters
 - Distributed edge collectors สำหรับ branch, customer edge, data center, cloud และ air-gapped environment
 - Unified metrics, logs, traces, events, inventory, topology, alerting, incident, SLO/SLA และ report
-- Dashboard-as-code, versioned template packs, multi-tenancy, RBAC และ immutable audit trail
+- Universal dashboard kernel สำหรับ KPI, time series, table, event, topology, geospatial, industrial, scientific, media, workflow และ custom renderer
+- Responsive definitions สำหรับ desktop, mobile, wallboard, kiosk, embed, print, PDF และ accessibility fallback
+- Versioned Domain Pack สำหรับความหมาย หน่วย สถานะ dashboard alert report และ workflow ของแต่ละวงการ
+- Dashboard-as-code, versioned template packs, multi-tenancy, RBAC และ tamper-evident audit
 - AI-assisted anomaly, correlation, root-cause suggestion, forecasting และ incident summary
 - Guardrailed automation: proposal, approval, expiration, verification, rollback และ evidence
 
@@ -39,10 +42,12 @@ CherryDash เป็น clean-room implementation: ไม่ fork, copy, embed, 
 - `cherrydash-server`: health, system information and foundation overview API
 - `cherrydash-ingest`: credential-bound tenant ingestion with append-only local WAL
 - `cherrydash-edge`: authenticated heartbeat and basic Linux host snapshot collector
+- `cherrydash-core`: telemetry contract plus dashboard definition v1 and validation
 - `web`: enterprise CherryDash dashboard shell connected to overview API
+- JSON schemas for dashboard definitions, renderer manifests and declarative Domain Packs
 - Docker Compose topology for services plus PostgreSQL, ClickHouse, NATS, Valkey and MinIO
 
-NATS publishing, WAL replay, ClickHouse writing and PostgreSQL-backed APIs are the next implementation slice; infrastructure containers are scaffolded but not falsely presented as wired production functionality.
+NATS publishing, WAL replay, ClickHouse writing, PostgreSQL-backed APIs, universal frame query path and renderer runtime are subsequent implementation slices; infrastructure and schemas are not falsely presented as complete production functionality.
 
 ## Quick start
 
@@ -88,6 +93,14 @@ curl -sS http://localhost:8081/api/v1/ingest/status
 
 `durableWal=false` means the gateway acknowledged after userspace/OS flush only. Set `CHERRYDASH_INGEST_SYNC_WRITES=true` to require `sync_data()` before a durable acknowledgement. Segmented WAL, batching and replay remain P0 work.
 
+## Dashboard contract example
+
+```bash
+cat examples/dashboards/universal-operations.dashboard.json
+```
+
+The example demonstrates the schema only. A renderer identifier in a definition does not mean that renderer has been implemented or approved.
+
 ## Native development
 
 Requirements: current stable Rust toolchain and Node.js 22+
@@ -116,11 +129,13 @@ make compose-config
 
 ```text
 agents/        CherryDash edge and future native collectors
-crates/        shared Rust types and libraries
+crates/        shared Rust types, validation and libraries
 services/      central control/data-plane services
 web/           native CherryDash dashboard application
 deploy/        containers, Compose, storage schemas and proxy config
-docs/          architecture, scope, security, identity, delivery and roadmap
+docs/          architecture, dashboard, scope, security, identity, delivery and roadmap
+schemas/       versioned public dashboard, renderer and Domain Pack contracts
+examples/      non-production examples used to demonstrate contracts
 proto/         versioned RPC contracts
 ```
 
@@ -133,13 +148,16 @@ proto/         versioned RPC contracts
 5. Durable receipt is reported only when the configured durability boundary has completed
 6. Scale data plane, query plane and control plane independently
 7. One product object model for dashboards, alerts, incidents, RBAC and audit
-8. No LLM may directly execute a risky infrastructure action
-9. No silent loss during import, conversion, buffering or replay
-10. No scale claim without a repeatable benchmark artifact
+8. Dashboard Core remains industry-neutral; domain behavior arrives through versioned declarative packs and approved extensions
+9. Renderer and adapter extensions require sandbox, permission, provenance, compatibility and rollback contracts
+10. No LLM may directly execute a risky infrastructure action
+11. No silent loss during import, conversion, buffering or replay
+12. No feature, compliance or scale claim without repeatable evidence
 
 ## Documentation
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/DASHBOARD_PLATFORM.md`](docs/DASHBOARD_PLATFORM.md)
 - [`docs/NO_FORK_POLICY.md`](docs/NO_FORK_POLICY.md)
 - [`docs/SECURITY_ARCHITECTURE.md`](docs/SECURITY_ARCHITECTURE.md)
 - [`docs/RESOURCE_IDENTITY.md`](docs/RESOURCE_IDENTITY.md)
@@ -149,6 +167,7 @@ proto/         versioned RPC contracts
 - [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
 - [`docs/adr/0001-core-platform-stack.md`](docs/adr/0001-core-platform-stack.md)
+- [`docs/adr/0002-universal-dashboard-kernel.md`](docs/adr/0002-universal-dashboard-kernel.md)
 
 ## Licensing note
 
