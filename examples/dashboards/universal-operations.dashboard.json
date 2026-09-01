@@ -1,0 +1,155 @@
+{
+  "schemaVersion": 1,
+  "key": "global.operations.overview",
+  "title": "Universal Operations Overview",
+  "description": "Example of the industry-neutral CherryDash dashboard contract. It is not a claim that every renderer is implemented yet.",
+  "tags": ["operations", "example"],
+  "locale": "th-TH",
+  "timezone": "Asia/Bangkok",
+  "domainProfiles": ["infrastructure.operations", "facilities.operations"],
+  "dataSources": [
+    {
+      "id": "native",
+      "adapter": "cherrydash.native.telemetry/v1",
+      "configuration": {
+        "tenantScoped": true
+      },
+      "secretRefs": {}
+    }
+  ],
+  "variables": [
+    {
+      "name": "site",
+      "kind": "query",
+      "label": "Site",
+      "query": {
+        "id": "sites",
+        "dataSourceRef": "native",
+        "queryType": "resource_values",
+        "expression": {
+          "resourceType": "site"
+        },
+        "expectedShape": "table",
+        "options": null
+      },
+      "defaultValue": "all",
+      "allowMultiple": true,
+      "includeAll": true,
+      "options": []
+    }
+  ],
+  "layouts": [
+    {
+      "key": "desktop",
+      "minWidthPx": 1024,
+      "columns": 12,
+      "rowHeightPx": 32,
+      "dense": true
+    },
+    {
+      "key": "mobile",
+      "minWidthPx": 0,
+      "columns": 4,
+      "rowHeightPx": 28,
+      "dense": false
+    },
+    {
+      "key": "wallboard",
+      "minWidthPx": 1920,
+      "columns": 24,
+      "rowHeightPx": 36,
+      "dense": true
+    }
+  ],
+  "panels": [
+    {
+      "id": "health",
+      "title": "Operational Health",
+      "renderer": "cherrydash.visualization.status_grid/v1",
+      "queries": [
+        {
+          "id": "health-by-site",
+          "dataSourceRef": "native",
+          "queryType": "resource_status",
+          "expression": {
+            "resourceType": "site",
+            "site": "$site"
+          },
+          "expectedShape": "table",
+          "options": null
+        }
+      ],
+      "placements": [
+        { "layout": "desktop", "x": 0, "y": 0, "width": 4, "height": 5 },
+        { "layout": "mobile", "x": 0, "y": 0, "width": 4, "height": 5 },
+        { "layout": "wallboard", "x": 0, "y": 0, "width": 8, "height": 5 }
+      ],
+      "transformations": [],
+      "interactions": [
+        {
+          "event": "select",
+          "action": "dashboard_filter",
+          "target": "site",
+          "configuration": null
+        }
+      ],
+      "options": {
+        "showLabels": true
+      },
+      "accessibility": {
+        "label": "Operational health by site",
+        "tableFallback": true,
+        "colorIndependent": true
+      }
+    },
+    {
+      "id": "throughput",
+      "title": "Telemetry Throughput",
+      "renderer": "cherrydash.visualization.time_series/v1",
+      "queries": [
+        {
+          "id": "events-per-second",
+          "dataSourceRef": "native",
+          "queryType": "metric_range",
+          "expression": {
+            "metric": "cherrydash.ingest.events_per_second",
+            "site": "$site"
+          },
+          "expectedShape": "time_series",
+          "options": {
+            "resolution": "auto"
+          }
+        }
+      ],
+      "placements": [
+        { "layout": "desktop", "x": 4, "y": 0, "width": 8, "height": 5 },
+        { "layout": "mobile", "x": 0, "y": 5, "width": 4, "height": 6 },
+        { "layout": "wallboard", "x": 8, "y": 0, "width": 16, "height": 5 }
+      ],
+      "transformations": [],
+      "interactions": [
+        {
+          "event": "brush",
+          "action": "set_time_range",
+          "configuration": null
+        }
+      ],
+      "options": {
+        "legend": "bottom",
+        "unit": "events_per_second"
+      },
+      "accessibility": {
+        "label": "Telemetry throughput over time",
+        "tableFallback": true,
+        "colorIndependent": true
+      }
+    }
+  ],
+  "settings": {
+    "defaultTimeRange": "PT24H",
+    "refreshIntervalSeconds": 30,
+    "liveMode": true,
+    "displayModes": ["desktop", "mobile", "wallboard", "kiosk", "print"],
+    "maxQueryConcurrency": 8
+  }
+}
