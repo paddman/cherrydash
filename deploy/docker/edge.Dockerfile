@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: AGPL-3.0-only
 FROM rust:1-bookworm AS builder
 WORKDIR /workspace
 

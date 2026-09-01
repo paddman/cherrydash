@@ -54,7 +54,7 @@ NATS publishing, WAL replay, ClickHouse writing, PostgreSQL-backed APIs, univers
 ```bash
 git clone https://github.com/paddman/cherrydash.git
 cd cherrydash
-git switch feat/foundation-v0.1
+git switch main
 cp .env.example .env
 docker compose -f deploy/compose/docker-compose.yml up --build
 ```
@@ -123,6 +123,7 @@ Quality checks:
 make check
 make web-build
 make compose-config
+python3 scripts/license_policy.py --check
 ```
 
 ## Repository layout
@@ -154,6 +155,22 @@ proto/         versioned RPC contracts
 11. No silent loss during import, conversion, buffering or replay
 12. No feature, compliance or scale claim without repeatable evidence
 
+## Licensing
+
+CherryDash ใช้ **path-based licensing** โดยไฟล์ `LICENSE` ที่ใกล้ไฟล์งานที่สุดเป็นตัวกำหนดสิทธิ์ของไฟล์นั้น
+
+| ขอบเขต | SPDX identifier | License file |
+|---|---|---|
+| Root และทุก path ที่ไม่มี `LICENSE` เฉพาะทาง เช่น `services/`, `web/`, `deploy/`, `docs/`, `examples/` | `AGPL-3.0-only` | [`LICENSE`](LICENSE) |
+| `agents/` | `Apache-2.0` | [`agents/LICENSE`](agents/LICENSE) |
+| `crates/` | `Apache-2.0` | [`crates/LICENSE`](crates/LICENSE) |
+| `proto/` | `Apache-2.0` | [`proto/LICENSE`](proto/LICENSE) |
+| `schemas/` | `Apache-2.0` | [`schemas/LICENSE`](schemas/LICENSE) |
+
+ไฟล์ source และ configuration ที่รองรับ comment มี SPDX header ตาม license ของ path นั้น ส่วน JSON ซึ่งไม่รองรับ comment ใช้ไฟล์ sidecar `.license` เพื่อไม่ทำลาย syntax หรือ schema validation
+
+การส่ง Contribution เข้ามาในโครงการต้องยอมรับ [`CLA.md`](CLA.md) และผ่านสถานะของ CLA Assistant ก่อน merge ดูขั้นตอนสำหรับผู้ดูแลที่ [`docs/CLA_ASSISTANT.md`](docs/CLA_ASSISTANT.md)
+
 ## Documentation
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
@@ -166,9 +183,6 @@ proto/         versioned RPC contracts
 - [`docs/PRODUCT_SCOPE.md`](docs/PRODUCT_SCOPE.md)
 - [`docs/COMPATIBILITY.md`](docs/COMPATIBILITY.md)
 - [`docs/ROADMAP.md`](docs/ROADMAP.md)
+- [`docs/CLA_ASSISTANT.md`](docs/CLA_ASSISTANT.md)
 - [`docs/adr/0001-core-platform-stack.md`](docs/adr/0001-core-platform-stack.md)
 - [`docs/adr/0002-universal-dashboard-kernel.md`](docs/adr/0002-universal-dashboard-kernel.md)
-
-## Licensing note
-
-A CherryDash project license has not yet been selected. Third-party libraries, public protocols, templates and assets require explicit dependency/license review before inclusion. Product compatibility never grants permission to copy another implementation.

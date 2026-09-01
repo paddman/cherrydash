@@ -31,3 +31,9 @@
 ## Migration and rollback
 
 <!-- State compatibility, rollout order, rollback command/path and data implications. -->
+
+## Licensing and CLA
+
+- [ ] ฉันได้อ่านและลงนาม `CLA.md` เมื่อ CLA Assistant ร้องขอ
+- [ ] ไฟล์ใหม่และไฟล์ที่ย้ายมี SPDX identifier ตรงกับ license boundary
+- [ ] ไม่มี source, asset หรือ schema จากบุคคลที่สามที่ขาด provenance/license record
